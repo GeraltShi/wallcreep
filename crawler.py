@@ -31,7 +31,6 @@ class DataThread(QThread):
         self.wait()
 
     def run(self):
-        # Read 3 Rams with PipeOut
         head = 'https://wallpapersite.com'
         url = 'https://wallpapersite.com/?page=1'
         headers = {'User-Agent': 'Mozilla/5.0'}
@@ -66,6 +65,8 @@ class MainWindow(QWidget):
 
     def on_init(self):
         self.thread = DataThread()
+        # -----------------Widgets--------------#
+        # TODO: Add different sections, page selection and recursive mode
         self.button_start = QPushButton('Start', self)
         self.button_quit = QPushButton('Quit', self)
         self.logTextBox = QTextEditLogger(self)
@@ -81,13 +82,13 @@ class MainWindow(QWidget):
         # -----------------Layout---------------#
         self.layout_main = QVBoxLayout()
         self.layout_main.addWidget(self.button_start)
-        self.layout_main.addWidget(self.button_quit)
         self.layout_log = QVBoxLayout()
         self.layout_log.addWidget(self.logTextBox.widget)
         self.layout_main.addLayout(self.layout_log)
         self.layout_main.addWidget(self.progress)
+        self.layout_main.addWidget(self.button_quit)
         self.setLayout(self.layout_main)
-        self.setGeometry(300,300,300,300)
+        self.setGeometry(300, 300 ,300 ,300)
         self.setWindowTitle('Wallcreep')
         self.batch_size = 0
 
@@ -96,9 +97,10 @@ class MainWindow(QWidget):
             self.batch_size = result
         else:
             if self.batch_size is not 0:
-                logging.info('%d wallpapers downloaded' % result)
-                self.progress.setValue(result/self.batch_size*100)
-                if result is 0:
+                if result is not 0:
+                    logging.info('%d wallpapers downloaded' % result)
+                    self.progress.setValue(result/self.batch_size*100)
+                else:
                     logging.info('Download Success')
             else:
                 logging.info('No wallpapers found')
