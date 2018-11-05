@@ -59,7 +59,7 @@ class DownloadThread(QThread):
                 sub_response = requests.get(html, headers=headers)
                 sub_soup = BeautifulSoup(sub_response.content, 'html.parser')
                 sub_items = sub_soup.select("div.pic-left > div > span.res-ttl > a.original")
-                sub_img = self.head + sub_items[0].get('href')
+                sub_img = self.default_head + sub_items[0].get('href')
                 img_name = folder_path + sub_img.strip().split('/')[-1]
                 with open(img_name, 'wb') as file:
                     file.write(requests.get(sub_img).content)
