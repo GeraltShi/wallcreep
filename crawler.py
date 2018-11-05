@@ -4,9 +4,9 @@ from bs4 import BeautifulSoup
 import os
 import time
 from PyQt5.QtWidgets import QWidget, QPushButton, QApplication, QSlider, QHBoxLayout, QVBoxLayout, QLabel, \
-    QPlainTextEdit, QProgressBar, QGridLayout, QCheckBox
-from PyQt5.QtCore import QCoreApplication, Qt, QRandomGenerator, pyqtSlot, QThread, pyqtSignal
-from PyQt5.QtGui import QPainter, QPixmap, QImage, QIcon
+    QPlainTextEdit, QProgressBar, QGridLayout, QCheckBox, QLineEdit
+from PyQt5.QtCore import QCoreApplication, Qt, QRandomGenerator, pyqtSlot, QThread, pyqtSignal, QMargins
+from PyQt5.QtGui import QPainter, QPixmap, QImage, QIcon, QIntValidator
 # import numpy as np
 import sys
 import logging
@@ -101,6 +101,37 @@ class RefreshThread(QThread):
                 file.close()
                 self._signal.emit(img_name)
 
+
+class MenuThread(QThread):
+    """Menu thread"""
+    _signal = pyqtSignal(dict)
+
+    def __init__(self):
+        super(MenuThread, self).__init__()
+        self.page = 1
+
+    def __del__(self):
+        self.wait()
+
+    def setpage(self, page):
+        self.page = page
+
+    def run(self):
+        head = 'https://wallpapersite.com'
+        url = 'https://wallpapersite.com/'
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        items = soup.select("#left-menu > ul.title-3 > li > a")
+        menu = {}
+        for index, item in enumerate(items):
+            if item:
+                link = head + item.get('href')
+                label = item.get_text()
+                menu.update({label: link})
+        self._signal.emit(menu)
+
+
 class MainWindow(QWidget):
     """Main Window"""
     def __init__(self, parent=None):
@@ -112,6 +143,9 @@ class MainWindow(QWidget):
         self.thread_download._signal.connect(self.callback_download)
         self.thread_refresh = RefreshThread()
         self.thread_refresh._signal.connect(self.callback_refresh)
+        self.thread_menu = MenuThread()
+        self.thread_menu._signal.connect(self.callback_menu)
+        self.thread_menu.start()
         # -----------------Widgets--------------#
         # TODO: Add different sections and recursive mode, Refine UI
         self.button_next = QPushButton('>', self)
@@ -122,6 +156,11 @@ class MainWindow(QWidget):
         self.label_page = QLabel('0')
         self.label_page.setAlignment(Qt.AlignHCenter)
         self.label_page.setAlignment(Qt.AlignVCenter)
+        self.button_jump = QPushButton('Go To', self)
+        self.onlyInt = QIntValidator()
+        self.input_page = QLineEdit()
+        self.input_page.setValidator(self.onlyInt)
+        self.button_jump.clicked.connect(lambda: self.refresh(int(self.input_page.text())))
         self.picsnap = []
         for i in range(12):
             self.picsnap.append(QLabel())
@@ -147,6 +186,8 @@ class MainWindow(QWidget):
         self.layout_top.addWidget(self.button_prev)
         self.layout_top.addWidget(self.label_page)
         self.layout_top.addWidget(self.button_next)
+        self.layout_top.addWidget(self.input_page)
+        self.layout_top.addWidget(self.button_jump)
         self.layout_top.addStretch()
         self.layout_top.addWidget(self.button_download)
         self.layout_log = QVBoxLayout()
@@ -159,14 +200,23 @@ class MainWindow(QWidget):
         self.layout_main.addLayout(self.layout_top)
         self.layout_main.addLayout(self.layout_log)
         self.layout_main.addLayout(self.layout_bottom)
-        self.setLayout(self.layout_main)
+        self.layout_menu = QVBoxLayout()
+        self.layout_menu.setContentsMargins(QMargins(0,0,0,0))
+        self.layout_menu.setSpacing(0)
+        self.layout = QHBoxLayout()
+        self.layout.addLayout(self.layout_menu)
+        self.layout.addLayout(self.layout_main)
+        self.setLayout(self.layout)
         self.setWindowTitle('Wallcreep')
         self.setWindowIcon(QIcon('./ico/ico.png'))
-        self.setFixedSize(600, 800)
+        self.setFixedSize(800, 800)
         self.setWindowFlags(Qt.WindowMinimizeButtonHint)
         self.batch_size = 0
         self.i = 0
         self.page = 0
+        self.button_key = []
+        self.menu = {}
+        self.setStyleSheet('font: 12pt Bahnschrift Condensed')
 
     def callback_download(self, result, length_vld):
         """Save pictures"""
@@ -191,6 +241,21 @@ class MainWindow(QWidget):
         self.i = self.i + 1
         self.thread_refresh.quit()
 
+    def callback_menu(self, menu):
+        """Update menu"""
+        # TODO: Fix the value issue, Use a more cyberpunk theme
+        self.menu = menu
+        for key in self.menu:
+            logging.info('%s, %s' % (key, self.menu[key]))
+            self.button_key.append(QPushButton('%s' % key))
+        print_val = ''
+        for m in range(len(self.button_key)):
+            print_val = self.menu[self.button_key[m].text()]
+            logging.info(print_val)
+            self.button_key[m].clicked.connect(lambda: self.switch(print_val))
+            self.layout_menu.addWidget(self.button_key[m])
+            
+
 
     @pyqtSlot()
     def download(self):
@@ -200,6 +265,7 @@ class MainWindow(QWidget):
     @pyqtSlot()
     def refresh(self, page):
         """Start the refresh thread and update ui"""
+        logging.info('%d'% page)
         self.thread_refresh.setpage(page)
         self.thread_refresh.start()
         self.i = 0
@@ -212,12 +278,18 @@ class MainWindow(QWidget):
             self.button_prev.setEnabled(True)
 
     @pyqtSlot()
+    def switch(self, link):
+        """Switch theme"""
+        logging.info(link)
+
+    @pyqtSlot()
     def quit(self):
         """Quit the app"""
         QCoreApplication.quit()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    
     mw = MainWindow()
     mw.show()
     sys.exit(app.exec_())
