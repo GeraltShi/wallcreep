@@ -247,14 +247,14 @@ class MainWindow(QWidget):
         self.menu = menu
         for key in self.menu:
             logging.info('%s, %s' % (key, self.menu[key]))
-            self.button_key.append(QPushButton('%s' % key))
+            button = QPushButton('%s' % key)
+            self.button_key.append(button)
         print_val = ''
         for m in range(len(self.button_key)):
             print_val = self.menu[self.button_key[m].text()]
             logging.info(print_val)
-            self.button_key[m].clicked.connect(lambda: self.switch(print_val))
+            self.button_key[m].clicked.connect(lambda _, a=print_val: self.switch(a))
             self.layout_menu.addWidget(self.button_key[m])
-            
 
 
     @pyqtSlot()
@@ -289,7 +289,6 @@ class MainWindow(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    
     mw = MainWindow()
     mw.show()
     sys.exit(app.exec_())
