@@ -155,7 +155,10 @@ class MainWindow(QWidget):
         self.thread_menu._signal.connect(self.callback_menu)
         self.thread_menu.start()
         # -----------------Widgets--------------#
-        # TODO: Add different sections and recursive mode, Refine UI
+        # TODO: Add recursive mode, dynamic page range, Refine UI, Optimize speed
+        self.input_search = QLineEdit()
+        self.button_search = QPushButton('Search', self)
+        self.button_search.clicked.connect(lambda: self.search(self.input_search.text()))
         self.button_next = QPushButton('>', self)
         self.button_prev = QPushButton('<', self)
         self.button_prev.setEnabled(False)
@@ -190,24 +193,30 @@ class MainWindow(QWidget):
         self.layout_snap = QGridLayout()
         for i in range(12):
             self.layout_snap.addWidget(self.picsnap[i], i/3, i%3)
-        self.layout_top = QHBoxLayout()
-        self.layout_top.addWidget(self.button_prev)
-        self.layout_top.addWidget(self.label_page)
-        self.layout_top.addWidget(self.button_next)
-        self.layout_top.addWidget(self.input_page)
-        self.layout_top.addWidget(self.button_jump)
-        self.layout_top.addStretch()
-        self.layout_top.addWidget(self.button_download)
+        self.layout_search = QHBoxLayout()
+        self.layout_search.addStretch()
+        self.layout_search.addWidget(self.input_search)
+        self.layout_search.addWidget(self.button_search)
+        self.layout_page = QHBoxLayout()
+        self.layout_page.addWidget(self.button_prev)
+        self.layout_page.addWidget(self.label_page)
+        self.layout_page.addWidget(self.button_next)
+        self.layout_page.addWidget(self.input_page)
+        self.layout_page.addWidget(self.button_jump)
+        self.layout_page.addStretch()
+        self.layout_page.addWidget(self.button_download)
         self.layout_log = QVBoxLayout()
         self.layout_log.addWidget(self.logTextBox.widget)
         self.layout_bottom = QHBoxLayout()
         self.layout_bottom.addWidget(self.progress)
         self.layout_bottom.addWidget(self.button_quit)
+        self.layout_main.addLayout(self.layout_search)
         self.layout_main.addStretch()
         self.layout_main.addLayout(self.layout_snap)
-        self.layout_main.addLayout(self.layout_top)
+        self.layout_main.addLayout(self.layout_page)
         self.layout_main.addLayout(self.layout_log)
         self.layout_main.addLayout(self.layout_bottom)
+
         self.layout_menu = QVBoxLayout()
         self.layout_menu.setContentsMargins(QMargins(0,0,0,0))
         self.layout_menu.setSpacing(0)
@@ -217,7 +226,7 @@ class MainWindow(QWidget):
         self.setLayout(self.layout)
         self.setWindowTitle('Wallcreep')
         self.setWindowIcon(QIcon('./ico/ico.png'))
-        self.setFixedSize(800, 800)
+        self.setFixedSize(800, 840)
         self.setWindowFlags(Qt.WindowMinimizeButtonHint)
         self.batch_size = 0
         self.i = 0
@@ -258,7 +267,6 @@ class MainWindow(QWidget):
             self.button_key[m].clicked.connect(lambda _, a=menu[self.button_key[m].text()]: self.switch(a))
             self.layout_menu.addWidget(self.button_key[m])
 
-
     @pyqtSlot()
     def download(self):
         """Start the download thread"""
@@ -278,6 +286,19 @@ class MainWindow(QWidget):
             self.button_download.setEnabled(True)
         if page > 1: 
             self.button_prev.setEnabled(True)
+
+    @pyqtSlot()
+    def search(self, keyword):
+        """User search"""
+        # TODO: Add error check
+        link = 'https://wallpapersite.com/wallpaper/' + keyword
+        logging.info('Preview Set to %s' % link)
+        self.thread_download.sethead(link)
+        self.thread_refresh.sethead(link)
+        self.thread_refresh.start()
+        self.button_download.setEnabled(True)
+        self.label_page.setText('Page 1')
+
 
     @pyqtSlot()
     def switch(self, link):
