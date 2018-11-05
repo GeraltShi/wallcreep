@@ -29,6 +29,8 @@ class DownloadThread(QThread):
     def __init__(self):
         super(DownloadThread, self).__init__()
         self.page = 1
+        self.head = 'https://wallpapersite.com'
+        self.default_head = 'https://wallpapersite.com'
 
     def __del__(self):
         self.wait()
@@ -36,9 +38,11 @@ class DownloadThread(QThread):
     def setpage(self, page):
         self.page = page
 
+    def sethead(self, head):
+        self.head = head
+
     def run(self):
-        head = 'https://wallpapersite.com'
-        url = 'https://wallpapersite.com/?page=%d' % (self.page)
+        url = self.head + '?page=%d' % (self.page)
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -51,11 +55,11 @@ class DownloadThread(QThread):
 
         for index, item in enumerate(items):
             if item:
-                html = head + item.get('href')
+                html = self.default_head + item.get('href')
                 sub_response = requests.get(html, headers=headers)
                 sub_soup = BeautifulSoup(sub_response.content, 'html.parser')
                 sub_items = sub_soup.select("div.pic-left > div > span.res-ttl > a.original")
-                sub_img = head + sub_items[0].get('href')
+                sub_img = self.head + sub_items[0].get('href')
                 img_name = folder_path + sub_img.strip().split('/')[-1]
                 with open(img_name, 'wb') as file:
                     file.write(requests.get(sub_img).content)
@@ -72,16 +76,20 @@ class RefreshThread(QThread):
     def __init__(self):
         super(RefreshThread, self).__init__()
         self.page = 1
+        self.head = 'https://wallpapersite.com'
+        self.default_head = 'https://wallpapersite.com'
 
     def __del__(self):
         self.wait()
 
     def setpage(self, page):
         self.page = page
+    
+    def sethead(self, head):
+        self.head = head
 
     def run(self):
-        head = 'https://wallpapersite.com'
-        url = 'https://wallpapersite.com/?page=%d' %(self.page)
+        url = self.head + '?page=%d' %(self.page)
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -93,7 +101,7 @@ class RefreshThread(QThread):
         # self._signal.emit(len(items))
         for index, item in enumerate(items):
             if item:
-                sub_img = head + item.get('src')
+                sub_img = self.default_head + item.get('src')
                 img_name = folder_path + sub_img.strip().split('/')[-1]
                 with open(img_name, 'wb') as file:
                     file.write(requests.get(sub_img).content)
@@ -215,7 +223,6 @@ class MainWindow(QWidget):
         self.i = 0
         self.page = 0
         self.button_key = []
-        self.menu = {}
         self.setStyleSheet('font: 12pt Bahnschrift Condensed')
 
     def callback_download(self, result, length_vld):
@@ -243,17 +250,12 @@ class MainWindow(QWidget):
 
     def callback_menu(self, menu):
         """Update menu"""
-        # TODO: Fix the value issue, Use a more cyberpunk theme
-        self.menu = menu
-        for key in self.menu:
-            logging.info('%s, %s' % (key, self.menu[key]))
+        # TODO: Use a more cyberpunk theme
+        for key in menu:
             button = QPushButton('%s' % key)
             self.button_key.append(button)
-        print_val = ''
         for m in range(len(self.button_key)):
-            print_val = self.menu[self.button_key[m].text()]
-            logging.info(print_val)
-            self.button_key[m].clicked.connect(lambda _, a=print_val: self.switch(a))
+            self.button_key[m].clicked.connect(lambda _, a=menu[self.button_key[m].text()]: self.switch(a))
             self.layout_menu.addWidget(self.button_key[m])
 
 
@@ -280,7 +282,9 @@ class MainWindow(QWidget):
     @pyqtSlot()
     def switch(self, link):
         """Switch theme"""
-        logging.info(link)
+        logging.info('Preview Set to %s' % link)
+        self.thread_download.sethead(link)
+        self.thread_refresh.sethead(link)
 
     @pyqtSlot()
     def quit(self):
