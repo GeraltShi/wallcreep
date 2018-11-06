@@ -155,7 +155,7 @@ class MainWindow(QWidget):
         self.thread_menu._signal.connect(self.callback_menu)
         self.thread_menu.start()
         # -----------------Widgets--------------#
-        # TODO: Add recursive mode, dynamic page range, Refine UI, Optimize speed
+        # TODO: Add recursive mode, dynamic page range, Refine UI, Optimize speed with multithread downloading, fix crash exceptions, pixiv support
         self.input_search = QLineEdit()
         self.button_search = QPushButton('Search', self)
         self.button_search.clicked.connect(lambda: self.search(self.input_search.text()))
@@ -225,7 +225,7 @@ class MainWindow(QWidget):
         self.layout.addLayout(self.layout_main)
         self.setLayout(self.layout)
         self.setWindowTitle('Wallcreep')
-        self.setWindowIcon(QIcon('./ico/ico.png'))
+        # self.setWindowIcon(QIcon('./ico/crawler.png'))
         self.setFixedSize(800, 840)
         self.setWindowFlags(Qt.WindowMinimizeButtonHint)
         self.batch_size = 0
@@ -291,6 +291,7 @@ class MainWindow(QWidget):
     def search(self, keyword):
         """User search"""
         # TODO: Add error check
+        keyword.replace(" ", "%20")
         link = 'https://wallpapersite.com/wallpaper/' + keyword
         logging.info('Preview Set to %s' % link)
         self.thread_download.sethead(link)

@@ -2,3 +2,7 @@
 /.idea
 /.vscode
 /thumbnails
+/__pycache__
+/build
+/dist
+*.spec
